@@ -17,6 +17,7 @@ const walkDir = (dir, callback) => {
 export async function POST(req) {
   try {
     const body = await req.json();
+    console.log("body", body);
     const { folderPath } = body;
 
     if (!folderPath || !fs.existsSync(folderPath)) {
@@ -39,6 +40,7 @@ export async function POST(req) {
 
       const { url } = await put(key, content, {
         access: "public",
+        BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
       });
 
       uploadedFiles.push({
