@@ -1,10 +1,6 @@
 import { IncomingForm } from "formidable";
-
 import { put } from "@vercel/blob";
-
 import fs from "fs";
-
-// import path from "path";
 
 export const config = {
   api: {
@@ -13,12 +9,12 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end("Method Not Allowed");
-
-  // Security check
+  console.log("req", req);
+  if (req.method !== "POST") {
+    return res.status(405).end("Method Not Allowed");
+  }
 
   const apiKey = req.headers["x-api-key"];
-
   if (apiKey !== process.env.NEXT_X_API_KEY) {
     return res.status(403).json({ error: "Forbidden" });
   }
@@ -30,11 +26,13 @@ export default async function handler(req, res) {
   });
 
   form.parse(req, async (err, fields, files) => {
-    if (err) return res.status(500).json({ error: "Upload error" });
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Upload error" });
+    }
 
-    const blobPath = fields.blobPath?.[0];
-
-    const uploadedFile = files.file?.[0];
+    const blobPath = fields.blobPath;
+    const uploadedFile = files.file;
 
     if (!blobPath || !uploadedFile) {
       return res.status(400).json({ error: "Missing file or blob path" });
