@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   const apiKey = req.headers["x-api-key"];
 
-  if (apiKey !== "KJGUKFKJHHJF5669786%&D135") {
+  if (apiKey !== process.env.NEXT_X_API_KEY) {
     return res.status(403).json({ error: "Forbidden" });
   }
 
