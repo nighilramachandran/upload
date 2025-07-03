@@ -1,3 +1,4 @@
+import { isAuthorized } from "@/app/lib/authorizationHelper";
 import { isHidden } from "@/app/lib/fileUtils";
 import type { PutBlobResult, PutCommandOptions } from "@vercel/blob";
 import { put } from "@vercel/blob";
@@ -40,6 +41,12 @@ const walkDir = (dir: string, callback: FileCallback): void => {
 };
 
 export async function POST(request: NextRequest) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json(
+      { error: "Unauthorized: Invalid or missing token" },
+      { status: 401 }
+    );
+  }
   try {
     const body: UploadRequestBody = await request.json();
     console.log("Received folderPath:", body.folderPath);
@@ -68,7 +75,6 @@ export async function POST(request: NextRequest) {
         const options: PutCommandOptions = {
           access: "public",
           allowOverwrite: true,
-          // You can use BLOB_READ_WRITE_TOKEN if needed
         };
 
         const { url }: PutBlobResult = await put(key, content, options);
