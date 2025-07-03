@@ -4,7 +4,6 @@ import fs from "fs";
 import path from "path";
 import type { PutBlobResult, PutCommandOptions } from "@vercel/blob";
 
-// Define the callback type for walkDir
 type FileCallback = (filePath: string) => void;
 
 const walkDir = (dir: string, callback: FileCallback): void => {
@@ -18,7 +17,6 @@ const walkDir = (dir: string, callback: FileCallback): void => {
   });
 };
 
-// Define expected shape of request body
 interface UploadRequestBody {
   folderPath: string;
 }
