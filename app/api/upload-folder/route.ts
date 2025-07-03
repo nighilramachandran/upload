@@ -1,3 +1,4 @@
+import { isHidden } from "@/app/lib/fileUtils";
 import type { PutBlobResult, PutCommandOptions } from "@vercel/blob";
 import { put } from "@vercel/blob";
 import fs from "fs";
@@ -5,17 +6,6 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 
 type FileCallback = (filePath: string) => void;
-
-const walkDir = (dir: string, callback: FileCallback): void => {
-  fs.readdirSync(dir).forEach((file: string) => {
-    const fullPath = path.join(dir, file);
-    if (fs.statSync(fullPath).isDirectory()) {
-      walkDir(fullPath, callback);
-    } else {
-      callback(fullPath);
-    }
-  });
-};
 
 interface UploadRequestBody {
   folderPath: string;
@@ -31,10 +21,28 @@ interface FailedFile {
   error: string;
 }
 
+const walkDir = (dir: string, callback: FileCallback): void => {
+  fs.readdirSync(dir).forEach((file: string) => {
+    const fullPath = path.join(dir, file);
+
+    if (isHidden(fullPath)) {
+      console.log(`Skipped hidden: ${fullPath}`);
+      return;
+    }
+
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      walkDir(fullPath, callback);
+    } else {
+      callback(fullPath);
+    }
+  });
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body: UploadRequestBody = await request.json();
-    console.log("request body", body);
+    console.log("Received folderPath:", body.folderPath);
     const { folderPath } = body;
 
     if (!folderPath || !fs.existsSync(folderPath)) {
@@ -59,20 +67,20 @@ export async function POST(request: NextRequest) {
 
         const options: PutCommandOptions = {
           access: "public",
-          // BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN as string,
+          allowOverwrite: true,
+          // You can use BLOB_READ_WRITE_TOKEN if needed
         };
 
         const { url }: PutBlobResult = await put(key, content, options);
 
         uploadedFiles.push({ file: key, url });
-
         console.log(`Uploaded: ${key} → ${url}`);
       } catch (uploadError) {
         const errorMsg =
           uploadError instanceof Error
             ? uploadError.message
             : String(uploadError);
-        console.error(`Failed to upload ${filePath}: ${errorMsg}`);
+        console.error(`Failed to upload ${filePath}:`, errorMsg);
 
         failedFiles.push({ file: filePath, error: errorMsg });
       }
