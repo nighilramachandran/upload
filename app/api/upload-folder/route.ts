@@ -81,6 +81,13 @@ export async function POST(request: NextRequest) {
 
         uploadedFiles.push({ file: key, url });
         console.log(`Uploaded: ${key} → ${url}`);
+        //TODO
+        // {
+        //   "name": "photo.jpeg",
+        //   "key": "level-5/photo.jpeg",
+        //   "url": "https://...blob.vercel-storage.com/level-5/photo.jpeg"
+        // }
+        // should store this in the db
       } catch (uploadError) {
         const errorMsg =
           uploadError instanceof Error
