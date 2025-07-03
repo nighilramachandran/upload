@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { PutBlobResult, PutCommandOptions } from "@vercel/blob";
 import { put } from "@vercel/blob";
 import fs from "fs";
+import { NextRequest, NextResponse } from "next/server";
 import path from "path";
-import type { PutBlobResult, PutCommandOptions } from "@vercel/blob";
 
 type FileCallback = (filePath: string) => void;
 
@@ -26,6 +26,11 @@ interface UploadedFile {
   url: string;
 }
 
+interface FailedFile {
+  file: string;
+  error: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: UploadRequestBody = await request.json();
@@ -45,30 +50,46 @@ export async function POST(request: NextRequest) {
     });
 
     const uploadedFiles: UploadedFile[] = [];
+    const failedFiles: FailedFile[] = [];
 
     for (const filePath of files) {
-      const content = fs.readFileSync(filePath);
-      const key = path.relative(folderPath, filePath).replace(/\\/g, "/");
+      try {
+        const content = fs.readFileSync(filePath);
+        const key = path.relative(folderPath, filePath).replace(/\\/g, "/");
 
-      const options: PutCommandOptions = {
-        access: "public",
-        // BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN as string,
-      };
-      const { url }: PutBlobResult = await put(key, content, options);
+        const options: PutCommandOptions = {
+          access: "public",
+          // BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN as string,
+        };
 
-      uploadedFiles.push({
-        file: key,
-        url,
-      });
+        const { url }: PutBlobResult = await put(key, content, options);
+
+        uploadedFiles.push({ file: key, url });
+
+        console.log(`Uploaded: ${key} → ${url}`);
+      } catch (uploadError) {
+        const errorMsg =
+          uploadError instanceof Error
+            ? uploadError.message
+            : String(uploadError);
+        console.error(`Failed to upload ${filePath}: ${errorMsg}`);
+
+        failedFiles.push({ file: filePath, error: errorMsg });
+      }
     }
 
     return NextResponse.json({
-      message: "Upload completed",
-      totalFiles: uploadedFiles.length,
-      files: uploadedFiles,
+      message: "Upload process completed",
+      totalFiles: files.length,
+      uploadedFilesCount: uploadedFiles.length,
+      failedFilesCount: failedFiles.length,
+      uploadedFiles,
+      failedFiles,
     });
   } catch (error) {
-    console.error("Upload Error:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Upload Error:", errorMsg);
+
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
